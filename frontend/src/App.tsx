@@ -3,7 +3,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { Trash2, Edit3, Save, X, Send, Calendar, Clock } from 'lucide-react';
 import './index.css';
 
-const API_BASE = '/api';
+const API_BASE = '/birthdays/api';
 
 interface Birthday {
   id: number;

@@ -122,6 +122,9 @@ function App() {
   const [showEditDayPicker, setShowEditDayPicker] = useState(false);
   const [showEditMonthPicker, setShowEditMonthPicker] = useState(false);
 
+  // Sorting State
+  const [sortBy, setSortBy] = useState<'calendar' | 'upcoming'>('calendar');
+
   useEffect(() => {
     fetchBirthdays();
     const interval = setInterval(fetchStatus, 3000);
@@ -138,6 +141,26 @@ function App() {
       console.error('Error fetching birthdays:', err);
     }
   };
+
+  const sortedBirthdays = [...birthdays].sort((a, b) => {
+    if (sortBy === 'calendar') {
+      if (a.month !== b.month) return a.month - b.month;
+      return a.day - b.day;
+    } else {
+      // "Upcoming" sorting logic
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+      const currentYear = now.getFullYear();
+
+      const getNextInstance = (day: number, month: number) => {
+        const d = new Date(currentYear, month - 1, day);
+        if (d < now) d.setFullYear(currentYear + 1);
+        return d.getTime();
+      };
+
+      return getNextInstance(a.day, a.month) - getNextInstance(b.day, b.month);
+    }
+  });
 
   const fetchStatus = async () => {
     try {
@@ -299,9 +322,25 @@ function App() {
             <button type="submit">Añadir</button>
           </form>
 
-          <h2 style={{ marginBottom: '1.5rem' }}>Lista de Cumpleaños</h2>
+          <div className="section-header">
+            <h2>Lista de Cumpleaños</h2>
+            <div className="sort-controls">
+              <button
+                className={`sort-tab ${sortBy === 'calendar' ? 'active' : ''}`}
+                onClick={() => setSortBy('calendar')}
+              >
+                Calendario
+              </button>
+              <button
+                className={`sort-tab ${sortBy === 'upcoming' ? 'active' : ''}`}
+                onClick={() => setSortBy('upcoming')}
+              >
+                Próximos
+              </button>
+            </div>
+          </div>
           <div className="birthdays-list">
-            {birthdays.map(b => (
+            {sortedBirthdays.map(b => (
               <div key={b.id} className="birthday-item">
                 {editingId === b.id ? (
                   <div style={{ display: 'flex', gap: '1rem', flex: 1, alignItems: 'center' }}>

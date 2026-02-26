@@ -1,0 +1,31 @@
+#!/bin/bash
+
+# Configuration
+SERVER_IP="YOUR_SERVER_IP"
+SERVER_USER="root"
+SSH_KEY="~/.ssh/your_ssh_key"
+REMOTE_DIR="/root/your-app-path"
+
+echo "🚀 Starting deployment to $SERVER_IP..."
+
+# 1. Build frontend
+echo "📦 Building frontend..."
+cd frontend
+npm run build
+cd ..
+
+# 2. Sync files to server
+echo "📤 Syncing files to server..."
+rsync -avz -e "ssh -i $SSH_KEY -o StrictHostKeyChecking=no" \
+    --exclude 'node_modules' \
+    --exclude '.git' \
+    --exclude '.wwebjs_auth' \
+    --exclude '.wwebjs_cache' \
+    --exclude 'backend/db.sqlite' \
+    backend frontend/dist $SERVER_USER@$SERVER_IP:$REMOTE_DIR/
+
+# 3. Restart server
+echo "🔄 Restarting server on VPS..."
+ssh -i $SSH_KEY -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_IP "pm2 restart bot-server"
+
+echo "✅ Deployment complete! Check your app at http://$SERVER_IP/"

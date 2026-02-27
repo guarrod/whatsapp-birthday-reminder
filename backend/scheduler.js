@@ -137,8 +137,8 @@ const checkBirthdaysAndSend = async () => {
 const getLastReminder = () => lastReminderInfo;
 
 const startScheduler = () => {
-    console.log('Starting birthday check scheduler (runs every day at 09:00 AM)...');
-    cron.schedule('0 9 * * *', () => {
+    console.log('Starting birthday check scheduler (runs every day at 09:00 AM Ecuador / 14:00 UTC)...');
+    cron.schedule('0 14 * * *', () => {
         checkBirthdaysAndSend();
     });
 };

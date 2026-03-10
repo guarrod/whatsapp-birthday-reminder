@@ -343,7 +343,7 @@ function App() {
             {sortedBirthdays.map(b => (
               <div key={b.id} className="birthday-item">
                 {editingId === b.id ? (
-                  <div style={{ display: 'flex', gap: '1rem', flex: 1, alignItems: 'center' }}>
+                  <div className="birthday-item-edit" style={{ display: 'flex', gap: '1rem', flex: 1, alignItems: 'center' }}>
                     <input type="text" value={editName} onChange={e => setEditName(e.target.value)} style={{ flex: 4 }} />
                     <div className="day-picker-container" style={{ flex: 1.2 }}>
                       <input

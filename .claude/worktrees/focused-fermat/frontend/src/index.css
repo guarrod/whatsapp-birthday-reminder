@@ -44,12 +44,6 @@ body {
   width: 100%;
 }
 
-@media (max-width: 600px) {
-  #root {
-    padding: 1.5rem 1rem 5rem 1rem;
-  }
-}
-
 .app-footer {
   background: #e7e7e7;
   padding: 1.5rem;
@@ -210,12 +204,6 @@ select:focus {
   box-shadow: var(--glass-shadow);
 }
 
-@media (max-width: 600px) {
-  .glass-panel {
-    padding: 1.25rem;
-  }
-}
-
 .layout {
   display: grid;
   grid-template-columns: 1fr 360px;
@@ -246,16 +234,6 @@ select:focus {
   letter-spacing: -1px;
 }
 
-@media (max-width: 600px) {
-  .title-gradient {
-    font-size: 2rem;
-  }
-  
-  .app-header p {
-    font-size: 0.95rem;
-  }
-}
-
 .app-header p {
   color: var(--text-muted);
   font-size: 1.1rem;
@@ -267,23 +245,6 @@ select:focus {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1.5rem;
-  gap: 1rem;
-}
-
-@media (max-width: 500px) {
-  .section-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  
-  .sort-controls {
-    width: 100%;
-  }
-  
-  .sort-tab {
-    flex: 1;
-    min-width: 0;
-  }
 }
 
 .sort-controls {
@@ -328,23 +289,6 @@ select:focus {
   transition: all 0.2s;
 }
 
-@media (max-width: 480px) {
-  .birthday-item {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 1rem;
-    padding: 1rem;
-  }
-  
-  .birthday-info {
-    width: 100%;
-  }
-  
-  .birthday-actions {
-    justify-content: flex-end;
-  }
-}
-
 .birthday-item:hover {
   transform: translateX(4px);
   background: white;
@@ -384,46 +328,6 @@ select:focus {
 .birthday-actions {
   display: flex;
   gap: 0.5rem;
-}
-
-/* Edit Form inside Birthday Item */
-.edit-form {
-  display: flex;
-  gap: 0.8rem;
-  flex: 1;
-  align-items: center;
-}
-
-.edit-input-name {
-  flex: 4;
-}
-
-.edit-input-day {
-  flex: 1.2;
-}
-
-.edit-input-month {
-  flex: 2.5;
-}
-
-@media (max-width: 550px) {
-  .edit-form {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.5rem;
-  }
-  
-  .edit-input-name,
-  .edit-input-day,
-  .edit-input-month {
-    flex: none;
-    width: 100%;
-  }
-  
-  .edit-form .birthday-actions {
-    justify-content: flex-end;
-    margin-top: 0.5rem;
-  }
 }
 
 /* Status Panel */
@@ -476,9 +380,63 @@ select:focus {
   align-items: end;
 }
 
+@media (max-width: 768px) {
+  .title-gradient {
+    font-size: 2rem;
+    letter-spacing: -0.5px;
+  }
+
+  .app-header p {
+    font-size: 0.95rem;
+  }
+
+  .glass-panel {
+    padding: 1.25rem;
+  }
+
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .birthday-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .birthday-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .birthday-item-edit {
+    flex-wrap: wrap;
+  }
+
+  .birthday-item-edit .birthday-actions {
+    flex: 1 1 100%;
+    justify-content: flex-end;
+  }
+}
+
 @media (max-width: 600px) {
+  #root {
+    padding: 1rem 1rem 4rem 1rem;
+  }
+
   .add-form {
     grid-template-columns: 1fr;
+  }
+
+  .title-gradient {
+    font-size: 1.7rem;
+  }
+
+  .sort-tab {
+    min-width: auto;
+    padding: 0.4rem 0.75rem;
   }
 }
 
@@ -568,16 +526,6 @@ select:focus {
   z-index: 100;
   width: 240px;
   animation: fadeInDown 0.2s ease-out;
-}
-
-@media (max-width: 550px) {
-  .day-picker-popover, 
-  .month-picker-popover {
-    width: calc(100vw - 3rem);
-    max-width: 280px;
-    left: 0;
-    transform: none;
-  }
 }
 
 .day-grid {

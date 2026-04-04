@@ -343,9 +343,9 @@ function App() {
             {sortedBirthdays.map(b => (
               <div key={b.id} className="birthday-item">
                 {editingId === b.id ? (
-                  <div className="edit-form">
-                    <input type="text" value={editName} onChange={e => setEditName(e.target.value)} className="edit-input-name" />
-                    <div className="day-picker-container edit-input-day">
+                  <div className="birthday-item-edit" style={{ display: 'flex', gap: '1rem', flex: 1, alignItems: 'center' }}>
+                    <input type="text" value={editName} onChange={e => setEditName(e.target.value)} style={{ flex: 4 }} />
+                    <div className="day-picker-container" style={{ flex: 1.2 }}>
                       <input
                         type="text"
                         readOnly
@@ -363,7 +363,7 @@ function App() {
                         />
                       )}
                     </div>
-                    <div className="day-picker-container edit-input-month">
+                    <div className="day-picker-container" style={{ flex: 2.5 }}>
                       <input
                         type="text"
                         readOnly
@@ -423,22 +423,6 @@ function App() {
           )}
 
           <div className="bot-logs">
-            {/* Estadísticas Mensuales */}
-            <div className="log-item" style={{ borderBottom: '1px solid #eee', paddingBottom: '0.8rem', marginBottom: '0.8rem' }}>
-              <span className="log-label">
-                <Calendar size={12} style={{ marginRight: '4px' }} /> 
-                Resumen de {FullMonths[new Date().getMonth()]}
-              </span>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
-                <span className="log-value" style={{ fontWeight: 700 }}>
-                  {birthdays.filter(b => b.month === (new Date().getMonth() + 1)).length} Cumpleaños
-                </span>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', background: '#eee', padding: '2px 8px', borderRadius: '10px' }}>
-                  {birthdays.filter(b => b.month === (new Date().getMonth() + 1) && b.day < new Date().getDate()).length} ya pasaron
-                </span>
-              </div>
-            </div>
-
             <div className="log-item">
               <span className="log-label"><Clock size={12} style={{ marginRight: '4px' }} /> Último envío</span>
               <span className="log-value">

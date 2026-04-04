@@ -1,0 +1,31 @@
+# Dependency directories
+node_modules/
+frontend/node_modules/
+backend/node_modules/
+
+# IDE/System files
+.DS_Store
+.vscode/
+.idea/
+
+# Build outputs
+frontend/dist/
+frontend/tsconfig.app.tsbuildinfo
+frontend/tsconfig.node.tsbuildinfo
+
+# WhatsApp Bot Sessions
+backend/.wwebjs_auth/
+backend/.wwebjs_cache/
+
+# Databases
+backend/*.sqlite
+backend/*.sqlite-journal
+
+# Environment variables
+.env
+backend/.env
+
+# Deployment sensitive files
+deploy.sh
+*.pem
+*.key

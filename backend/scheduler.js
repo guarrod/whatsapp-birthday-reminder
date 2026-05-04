@@ -9,6 +9,9 @@ let lastReminderInfo = {
     summary: null
 };
 
+let pendingRetry = false;
+let pendingRetryDate = null;
+
 /**
  * Calculates when the next reminder for a specific birthday will occur.
  */
@@ -85,7 +88,9 @@ const getNextReminderInfo = async () => {
 const checkBirthdaysAndSend = async () => {
     const status = getStatus();
     if (!status.isReady) {
-        console.log('Scheduler skipped: WhatsApp bot is not ready yet');
+        pendingRetry = true;
+        pendingRetryDate = new Date().toDateString();
+        console.warn(`[SCHEDULER] ⚠️  RECORDATORIO OMITIDO a las ${new Date().toISOString()} — WhatsApp no está listo. Se reintentará al reconectar.`);
         return;
     }
 
@@ -119,22 +124,33 @@ const checkBirthdaysAndSend = async () => {
         if (messages.length > 0) {
             const summaryMessage = messages.join('\n\n');
             await sendGroupMessage(GROUP_NAME, summaryMessage);
+            pendingRetry = false;
             lastReminderInfo = {
                 timestamp: new Date().toISOString(),
                 summary: summaryMessage.length > 50 ? summaryMessage.substring(0, 47) + '...' : summaryMessage
             };
         } else {
+            pendingRetry = false;
             lastReminderInfo = {
                 timestamp: new Date().toISOString(),
                 summary: 'No hubo cumpleaños hoy.'
             };
         }
     } catch (err) {
-        console.error('Error during scheduled birthday check:', err);
+        pendingRetry = true;
+        pendingRetryDate = new Date().toDateString();
+        console.error('[SCHEDULER] ❌ Error al enviar — se reintentará al reconectar:', err.message);
     }
 };
 
 const getLastReminder = () => lastReminderInfo;
+
+const checkPendingRetry = async () => {
+    if (pendingRetry && pendingRetryDate === new Date().toDateString()) {
+        console.log('[SCHEDULER] 🔄 Bot reconectado — reintentando recordatorio pendiente de hoy...');
+        await checkBirthdaysAndSend();
+    }
+};
 
 const startScheduler = () => {
     console.log('Starting birthday check scheduler (runs every day at 08:00 AM Ecuador / 13:00 UTC)...');
@@ -147,5 +163,6 @@ module.exports = {
     startScheduler,
     checkBirthdaysAndSend,
     getLastReminder,
-    getNextReminderInfo
+    getNextReminderInfo,
+    checkPendingRetry
 };

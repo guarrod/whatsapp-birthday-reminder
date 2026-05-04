@@ -252,6 +252,24 @@ function App() {
     }
   };
 
+  const today = new Date();
+  const startOfYear = new Date(today.getFullYear(), 0, 1);
+  const isLeap = (today.getFullYear() % 4 === 0 && today.getFullYear() % 100 !== 0) || today.getFullYear() % 400 === 0;
+  const totalDays = isLeap ? 366 : 365;
+  const dayOfYear = Math.floor((today.getTime() - startOfYear.getTime()) / 86400000) + 1;
+  const yearProgress = (dayOfYear / totalDays) * 100;
+
+  const birthdayDots = birthdays.map(b => {
+    const bdayDate = new Date(today.getFullYear(), b.month - 1, b.day);
+    const bdayDayOfYear = Math.floor((bdayDate.getTime() - startOfYear.getTime()) / 86400000) + 1;
+    const position = (bdayDayOfYear / totalDays) * 100;
+    const hasPassed = bdayDate < new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const isToday = bdayDate.toDateString() === today.toDateString();
+    return { ...b, position, hasPassed, isToday };
+  });
+
+  const passedCount = birthdayDots.filter(b => b.hasPassed).length;
+
   return (
     <div className="fade-in">
       <header className="app-header">
@@ -421,6 +439,30 @@ function App() {
               <p className="scan-instructions">Vincular dispositivo para activar</p>
             </div>
           )}
+
+          <div className="year-progress-section">
+            <div className="year-progress-header">
+              <span className="log-label" style={{ margin: 0 }}>Año {today.getFullYear()}</span>
+              <span className="year-progress-count">{passedCount} de {birthdays.length} cumpleaños</span>
+            </div>
+            <div className="year-progress-bar">
+              <div className="year-progress-fill" style={{ width: `${yearProgress}%` }} />
+              <div className="year-progress-today" style={{ left: `${yearProgress}%` }} />
+              {birthdayDots.map(b => (
+                <div
+                  key={b.id}
+                  className={`year-progress-dot ${b.hasPassed ? 'passed' : 'upcoming'} ${b.isToday ? 'today-dot' : ''}`}
+                  style={{ left: `${b.position}%` }}
+                  title={`${b.name} · ${b.day} ${formatMonth(b.month)}`}
+                />
+              ))}
+            </div>
+            <div className="year-progress-labels">
+              <span>Ene</span>
+              <span>Jun</span>
+              <span>Dic</span>
+            </div>
+          </div>
 
           <div className="bot-logs">
             {/* Estadísticas Mensuales */}

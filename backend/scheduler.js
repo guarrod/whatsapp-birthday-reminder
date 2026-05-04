@@ -85,7 +85,7 @@ const getNextReminderInfo = async () => {
     }
 };
 
-const checkBirthdaysAndSend = async () => {
+const checkBirthdaysAndSend = async (isRetry = false) => {
     const status = getStatus();
     if (!status.isReady) {
         pendingRetry = true;
@@ -111,18 +111,19 @@ const checkBirthdaysAndSend = async () => {
 
         birthdays.forEach(b => {
             if (b.month === currentMonth && b.day === currentDay) {
-                messages.push(`¡Hoy es el cumpleaños de *${b.name}*! 🥳🎂🎉 ¡Felicidades!`);
+                messages.push(`🤖 ¡Hoy es el cumpleaños de *${b.name}*! 🥳🎂🎉 ¡Felicidades!`);
             }
             if (b.month === (tomorrow.getMonth() + 1) && b.day === tomorrow.getDate()) {
-                messages.push(`Recordatorio: Mañana es el cumpleaños de *${b.name}*. 🎂`);
+                messages.push(`🤖 Recordatorio: Mañana es el cumpleaños de *${b.name}*. 🎂`);
             }
             if (b.month === (nextWeek.getMonth() + 1) && b.day === nextWeek.getDate()) {
-                messages.push(`Aviso: En exactamente una semana es el cumpleaños de *${b.name}*. 📅`);
+                messages.push(`🤖 Aviso: En exactamente una semana es el cumpleaños de *${b.name}*. 📅`);
             }
         });
 
         if (messages.length > 0) {
-            const summaryMessage = messages.join('\n\n');
+            const prefix = isRetry ? `_Disculpa, hubo un problema técnico y este mensaje no pudo enviarse a las 8:00 AM._\n\n` : '';
+            const summaryMessage = prefix + messages.join('\n\n');
             await sendGroupMessage(GROUP_NAME, summaryMessage);
             pendingRetry = false;
             lastReminderInfo = {
@@ -148,7 +149,7 @@ const getLastReminder = () => lastReminderInfo;
 const checkPendingRetry = async () => {
     if (pendingRetry && pendingRetryDate === new Date().toDateString()) {
         console.log('[SCHEDULER] 🔄 Bot reconectado — reintentando recordatorio pendiente de hoy...');
-        await checkBirthdaysAndSend();
+        await checkBirthdaysAndSend(true);
     }
 };
 

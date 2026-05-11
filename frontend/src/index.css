@@ -329,11 +329,17 @@ select:focus {
 }
 
 @media (max-width: 480px) {
+
+    .glass-panel {
+        padding: 1rem;
+    }
+
+
   .birthday-item {
     flex-direction: column;
     align-items: stretch;
     gap: 1rem;
-    padding: 1rem;
+    padding: 0.5rem;
   }
   
   .birthday-info {
@@ -355,7 +361,7 @@ select:focus {
 .birthday-info {
   display: flex;
   align-items: center;
-  gap: 1.2rem;
+  gap: 1rem;
 }
 
 .birthday-date {
@@ -364,7 +370,7 @@ select:focus {
   padding: 0.6rem 0.6rem;
   border-radius: 10px;
   font-weight: 700;
-  width: 70px;
+  width: 50px;
   text-align: center;
   display: flex;
   flex-direction: column;
@@ -427,6 +433,11 @@ select:focus {
 }
 
 /* Status Panel */
+
+.status-panel{
+      height: fit-content;
+}
+
 .status-panel h3 {
   margin-bottom: 1.5rem;
   font-size: 1.2rem;

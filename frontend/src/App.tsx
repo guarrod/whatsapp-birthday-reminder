@@ -510,6 +510,9 @@ function App() {
         </aside>
       </div>
 
+      <p className="version-footer">
+        v{__APP_VERSION__} · {__GIT_HASH__}
+      </p>
     </div>
   );
 }

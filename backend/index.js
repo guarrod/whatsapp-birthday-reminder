@@ -3,7 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const { getBirthdays, getBirthdayById, addBirthday, updateBirthday, deleteBirthday } = require('./db');
 const { initializeBot, getStatus, sendGroupMessage } = require('./bot');
-const { getLastReminder, getNextReminderInfo, startScheduler } = require('./scheduler');
+const { getLastReminder, getNextReminderInfo, startScheduler, checkPendingRetry } = require('./scheduler');
 
 const GROUP_NAME = process.env.WHATSAPP_GROUP_NAME || 'TB3-Asuntos sociales';
 
@@ -102,6 +102,10 @@ app.post('/api/bot/send-test/:id', async (req, res) => {
 // Start bot and scheduler
 initializeBot();
 startScheduler();
+
+// When the bot (re)connects, retry any reminder that failed today
+const { client } = require('./bot');
+client.on('ready', checkPendingRetry);
 
 // Serve static frontend
 const path = require('path');

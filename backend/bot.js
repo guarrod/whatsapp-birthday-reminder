@@ -3,6 +3,19 @@ const qrcode = require('qrcode-terminal');
 
 let latestQR = null;
 let isReady = false;
+let reconnectTimeout = null;
+
+const scheduleReconnect = () => {
+    if (reconnectTimeout) return;
+    console.log('[BOT] ⚠️  Reconexión programada en 15 segundos...');
+    reconnectTimeout = setTimeout(() => {
+        reconnectTimeout = null;
+        console.log('[BOT] 🔄 Intentando reconectar WhatsApp...');
+        client.initialize().catch(err => {
+            console.error('[BOT] ❌ Error al reconectar:', err.message);
+        });
+    }, 15000);
+};
 
 // Create a new WhatsApp client instance with local auth strategy 
 // Note: We use the local installation of Chrome because puppeteer download was skipped
@@ -41,8 +54,9 @@ client.on('auth_failure', msg => {
 });
 
 client.on('disconnected', (reason) => {
-    console.log('WhatsApp Client was disconnected', reason);
+    console.log('[BOT] ⚠️  WhatsApp desconectado:', reason);
     isReady = false;
+    scheduleReconnect();
 });
 
 const initializeBot = () => {
@@ -70,13 +84,18 @@ const sendGroupMessage = async (groupName, message) => {
 
         if (groupChat) {
             await client.sendMessage(groupChat.id._serialized, message);
-            console.log(`Mensaje enviado a grupo ${groupName}: ${message}`);
+            console.log(`[BOT] ✅ Mensaje enviado a grupo ${groupName}: ${message}`);
         } else {
-            console.log(`No se encontró el grupo: ${groupName}`);
+            console.log(`[BOT] ❌ No se encontró el grupo: ${groupName}`);
             throw new Error(`Group ${groupName} not found`);
         }
     } catch (error) {
-        console.error('Error sending message:', error);
+        if (error.message && error.message.includes('detached Frame')) {
+            console.error('[BOT] ❌ Puppeteer frame desconectado — marcando como no listo y reconectando...');
+            isReady = false;
+            scheduleReconnect();
+        }
+        console.error('[BOT] Error enviando mensaje:', error.message);
         throw error;
     }
 };

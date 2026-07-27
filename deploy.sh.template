@@ -21,7 +21,7 @@ rsync -avz -e "ssh -i $SSH_KEY -o StrictHostKeyChecking=no" \
     --exclude '.git' \
     --exclude '.wwebjs_auth' \
     --exclude '.wwebjs_cache' \
-    --exclude 'backend/db.sqlite' \
+    --exclude 'backend/database.sqlite' \
     backend frontend/dist $SERVER_USER@$SERVER_IP:$REMOTE_DIR/
 
 # 3. Restart server

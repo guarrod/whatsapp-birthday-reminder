@@ -5,7 +5,8 @@
 ## ✨ Características
 
 - **Recordatorios Automáticos**: Envía notificaciones 1 semana antes, 1 día antes y el mismo día del cumpleaños.
-- **Interfaz Moderna**: Tema claro ("Pleasant Light Theme") con diseño profesional y animaciones suaves.
+- **Reconexión Automática**: Si el bot pierde la sesión de WhatsApp, se reconecta solo y reintenta el recordatorio pendiente del día.
+- **Interfaz Moderna y Responsive**: Tema claro ("Pleasant Light Theme") con diseño profesional, animaciones suaves y adaptado a mobile.
 - **Gestión Visual**: Selectores interactivos para días y meses (nombres completos).
 - **Log de Actividad**: Seguimiento en tiempo real del último recordatorio enviado y el próximo evento programado.
 - **Bot de WhatsApp**: Integración robusta basada en `whatsapp-web.js`.
@@ -65,7 +66,7 @@ El proyecto incluye un script de despliegue automatizado.
 1. Abre la web (local o en tu VPS).
 2. Escanea el código QR con tu WhatsApp para vincular el bot.
 3. Añade los cumpleaños de tus amigos/familiares.
-4. ¡Listo! El bot se encargará del resto a las 09:00 AM cada día.
+4. ¡Listo! El bot se encargará del resto a las 08:00 AM (hora Ecuador) cada día.
 
 ---
 

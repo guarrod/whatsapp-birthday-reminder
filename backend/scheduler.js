@@ -1,12 +1,29 @@
 const cron = require('node-cron');
+const fs = require('fs');
+const path = require('path');
 const { getBirthdays } = require('./db');
 const { getStatus, sendGroupMessage } = require('./bot');
 
 const GROUP_NAME = process.env.WHATSAPP_GROUP_NAME || 'TB3-Asuntos sociales';
+const LAST_REMINDER_FILE = path.join(__dirname, 'last-reminder.json');
 
-let lastReminderInfo = {
-    timestamp: null,
-    summary: null
+const loadLastReminderInfo = () => {
+    try {
+        return JSON.parse(fs.readFileSync(LAST_REMINDER_FILE, 'utf8'));
+    } catch {
+        return { timestamp: null, summary: null };
+    }
+};
+
+let lastReminderInfo = loadLastReminderInfo();
+
+const setLastReminderInfo = (info) => {
+    lastReminderInfo = info;
+    try {
+        fs.writeFileSync(LAST_REMINDER_FILE, JSON.stringify(info));
+    } catch (err) {
+        console.error('[SCHEDULER] No se pudo guardar last-reminder.json:', err.message);
+    }
 };
 
 let pendingRetry = false;
@@ -126,16 +143,16 @@ const checkBirthdaysAndSend = async (isRetry = false) => {
             const summaryMessage = prefix + messages.join('\n\n');
             await sendGroupMessage(GROUP_NAME, summaryMessage);
             pendingRetry = false;
-            lastReminderInfo = {
+            setLastReminderInfo({
                 timestamp: new Date().toISOString(),
                 summary: summaryMessage.length > 50 ? summaryMessage.substring(0, 47) + '...' : summaryMessage
-            };
+            });
         } else {
             pendingRetry = false;
-            lastReminderInfo = {
+            setLastReminderInfo({
                 timestamp: new Date().toISOString(),
                 summary: 'No hubo cumpleaños hoy.'
-            };
+            });
         }
     } catch (err) {
         pendingRetry = true;
@@ -145,6 +162,13 @@ const checkBirthdaysAndSend = async (isRetry = false) => {
 };
 
 const getLastReminder = () => lastReminderInfo;
+
+const recordManualReminder = (message) => {
+    setLastReminderInfo({
+        timestamp: new Date().toISOString(),
+        summary: `Manual: ${message.length > 40 ? message.substring(0, 37) + '...' : message}`
+    });
+};
 
 const checkPendingRetry = async () => {
     if (pendingRetry && pendingRetryDate === new Date().toDateString()) {
@@ -165,5 +189,6 @@ module.exports = {
     checkBirthdaysAndSend,
     getLastReminder,
     getNextReminderInfo,
-    checkPendingRetry
+    checkPendingRetry,
+    recordManualReminder
 };

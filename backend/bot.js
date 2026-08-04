@@ -1,108 +1,134 @@
-const { Client, LocalAuth } = require('whatsapp-web.js');
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('baileys');
+const { Boom } = require('@hapi/boom');
+const pino = require('pino');
 const qrcode = require('qrcode-terminal');
+const path = require('path');
 
+const AUTH_DIR = path.join(__dirname, 'auth_info_baileys');
+const logger = pino({ level: 'silent' });
+
+let sock = null;
 let latestQR = null;
 let isReady = false;
-let reconnectTimeout = null;
+let reconnecting = false;
+let onReadyCallback = null;
 
-const scheduleReconnect = () => {
-    if (reconnectTimeout) return;
-    console.log('[BOT] ⚠️  Reconexión programada en 15 segundos...');
-    reconnectTimeout = setTimeout(() => {
-        reconnectTimeout = null;
-        console.log('[BOT] 🔄 Intentando reconectar WhatsApp...');
-        client.initialize().catch(err => {
-            console.error('[BOT] ❌ Error al reconectar:', err.message);
-        });
-    }, 15000);
+// Cache the group JID so we don't have to re-fetch all groups on every send
+let cachedGroupName = null;
+let cachedGroupJid = null;
+
+const connectToWhatsApp = async () => {
+    const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
+
+    sock = makeWASocket({
+        auth: state,
+        logger
+    });
+
+    sock.ev.on('creds.update', saveCreds);
+
+    sock.ev.on('connection.update', (update) => {
+        const { connection, lastDisconnect, qr } = update;
+
+        if (qr) {
+            console.log('QR Code received, scan it with your phone:');
+            qrcode.generate(qr, { small: true });
+            latestQR = qr;
+            isReady = false;
+        }
+
+        if (connection === 'open') {
+            console.log('WhatsApp Client is ready!');
+            latestQR = null;
+            isReady = true;
+            cachedGroupJid = null; // group JID may change between sessions
+            if (onReadyCallback) onReadyCallback();
+        }
+
+        if (connection === 'close') {
+            isReady = false;
+            const statusCode = lastDisconnect?.error instanceof Boom
+                ? lastDisconnect.error.output?.statusCode
+                : null;
+            const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
+
+            console.log('[BOT] ⚠️  WhatsApp desconectado:', lastDisconnect?.error?.message, '— reconectar:', shouldReconnect);
+
+            if (shouldReconnect && !reconnecting) {
+                reconnecting = true;
+                setTimeout(() => {
+                    reconnecting = false;
+                    connectToWhatsApp().catch(err => {
+                        console.error('[BOT] ❌ Error al reconectar:', err.message);
+                    });
+                }, 5000);
+            } else if (!shouldReconnect) {
+                console.error('[BOT] ❌ Sesión cerrada (logged out). Es necesario escanear el QR de nuevo.');
+            }
+        }
+    });
 };
-
-// Create a new WhatsApp client instance with local auth strategy 
-// Note: We use the local installation of Chrome because puppeteer download was skipped
-const executablePath = process.platform === 'darwin'
-    ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
-    : '/usr/bin/chromium-browser';
-
-const client = new Client({
-    authStrategy: new LocalAuth(),
-    puppeteer: {
-        executablePath,
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
-    }
-});
-
-client.on('qr', (qr) => {
-    console.log('QR Code received, scan it with your phone:');
-    qrcode.generate(qr, { small: true });
-    latestQR = qr;
-    isReady = false;
-});
-
-client.on('ready', () => {
-    console.log('WhatsApp Client is ready!');
-    latestQR = null; // Clear QR when ready
-    isReady = true;
-});
-
-client.on('authenticated', () => {
-    console.log('WhatsApp Client is authenticated!');
-});
-
-client.on('auth_failure', msg => {
-    console.error('WhatsApp Client authentication failure:', msg);
-    isReady = false;
-});
-
-client.on('disconnected', (reason) => {
-    console.log('[BOT] ⚠️  WhatsApp desconectado:', reason);
-    isReady = false;
-    scheduleReconnect();
-});
 
 const initializeBot = () => {
     console.log('Initializing WhatsApp bot...');
-    client.initialize().catch(err => {
+    connectToWhatsApp().catch(err => {
         console.error('Failed to initialize WhatsApp bot:', err);
     });
 };
 
-const getStatus = () => {
-    return {
-        isReady,
-        qr: latestQR
-    };
+const getStatus = () => ({
+    isReady,
+    qr: latestQR
+});
+
+// Called when the socket (re)connects, so pending reminders can be retried
+const onReady = (callback) => {
+    onReadyCallback = callback;
+};
+
+const resolveGroupJid = async (groupName) => {
+    if (cachedGroupJid && cachedGroupName === groupName) {
+        return cachedGroupJid;
+    }
+
+    const groups = await sock.groupFetchAllParticipating();
+    const match = Object.values(groups).find(g => g.subject === groupName);
+
+    if (!match) {
+        return null;
+    }
+
+    cachedGroupName = groupName;
+    cachedGroupJid = match.id;
+    return match.id;
 };
 
 const sendGroupMessage = async (groupName, message) => {
-    if (!isReady) {
+    if (!isReady || !sock) {
         throw new Error('WhatsApp client is not ready');
     }
 
     try {
-        const chats = await client.getChats();
-        const groupChat = chats.find(chat => chat.isGroup && chat.name === groupName);
+        const jid = await resolveGroupJid(groupName);
 
-        if (groupChat) {
-            await client.sendMessage(groupChat.id._serialized, message);
-            console.log(`[BOT] ✅ Mensaje enviado a grupo ${groupName}: ${message}`);
-        } else {
+        if (!jid) {
             console.log(`[BOT] ❌ No se encontró el grupo: ${groupName}`);
             throw new Error(`Group ${groupName} not found`);
         }
+
+        await sock.sendMessage(jid, { text: message });
+        console.log(`[BOT] ✅ Mensaje enviado a grupo ${groupName}: ${message}`);
     } catch (error) {
-        if (error.message && error.message.includes('detached Frame')) {
-            console.error('[BOT] ❌ Puppeteer frame desconectado — marcando como no listo y reconectando...');
-            isReady = false;
-            scheduleReconnect();
-        }
-        console.error('[BOT] Error enviando mensaje:', error.message);
+        // Cached JID may be stale (e.g. group recreated) — clear it so the next attempt re-resolves
+        cachedGroupJid = null;
+        console.error('[BOT] Error enviando mensaje:', error.message, '\n', error.stack);
         throw error;
     }
 };
 
 module.exports = {
-    client,
     initializeBot,
     getStatus,
-    sendGroupMessage
+    sendGroupMessage,
+    onReady
 };

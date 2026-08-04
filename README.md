@@ -8,12 +8,12 @@
 - **Reconexión Automática**: Si el bot pierde la sesión de WhatsApp, se reconecta solo y reintenta el recordatorio pendiente del día.
 - **Interfaz Moderna y Responsive**: Tema claro ("Pleasant Light Theme") con diseño profesional, animaciones suaves y adaptado a mobile.
 - **Gestión Visual**: Selectores interactivos para días y meses (nombres completos).
-- **Log de Actividad**: Seguimiento en tiempo real del último recordatorio enviado y el próximo evento programado.
-- **Bot de WhatsApp**: Integración robusta basada en `whatsapp-web.js`.
+- **Log de Actividad**: Seguimiento en tiempo real del último recordatorio enviado (persistido en disco, sobrevive a reinicios) y el próximo evento programado.
+- **Bot de WhatsApp**: Integración basada en [Baileys](https://github.com/WhiskeySockets/Baileys), que habla el protocolo WebSocket de WhatsApp directamente — sin navegador headless de por medio.
 
 ## 🛠️ Tecnologías
 
-- **Backend**: Node.js, Express, SQLite, whatsapp-web.js.
+- **Backend**: Node.js, Express, SQLite, Baileys.
 - **Frontend**: React, Vite, TypeScript, Lucide Icons.
 - **Estilos**: Vanilla CSS con variables personalizadas y glassmorphism.
 
@@ -21,7 +21,6 @@
 
 ### Requisitos
 - Node.js (v18+)
-- Google Chrome o Chromium
 
 ### Pasos
 
@@ -67,6 +66,14 @@ El proyecto incluye un script de despliegue automatizado.
 2. Escanea el código QR con tu WhatsApp para vincular el bot.
 3. Añade los cumpleaños de tus amigos/familiares.
 4. ¡Listo! El bot se encargará del resto a las 08:00 AM (hora Ecuador) cada día.
+
+## 🔄 Migración de whatsapp-web.js a Baileys
+
+El bot usaba originalmente `whatsapp-web.js`, que automatiza una instancia headless de Chrome para "leer" WhatsApp Web. En agosto 2026 esa librería quedó rota por un cambio interno de WhatsApp (migración al sistema LID), sin parche oficial publicado en semanas. Se migró a **Baileys**, que implementa el protocolo WebSocket de WhatsApp directamente:
+
+- No depende de Chrome/Chromium ni de Puppeteer — menor consumo de RAM y sin el riesgo de que un cambio visual de WhatsApp Web rompa el scraping.
+- La sesión se guarda en `backend/auth_info_baileys/` (antes `backend/.wwebjs_auth/`). Requiere volver a escanear el QR una sola vez tras la migración; sesiones futuras no se ven afectadas.
+- El campo `Último envío` del panel se persiste en `backend/last-reminder.json` para que no se pierda con cada reinicio del proceso.
 
 ---
 

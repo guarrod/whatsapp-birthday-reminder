@@ -16,10 +16,14 @@ frontend/tsconfig.node.tsbuildinfo
 # WhatsApp Bot Sessions
 backend/.wwebjs_auth/
 backend/.wwebjs_cache/
+backend/auth_info_baileys/
 
 # Databases
 backend/*.sqlite
 backend/*.sqlite-journal
+
+# Runtime state
+backend/last-reminder.json
 
 # Environment variables
 .env

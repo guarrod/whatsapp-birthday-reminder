@@ -7,27 +7,40 @@ const { getStatus, sendGroupMessage } = require('./bot');
 const GROUP_NAME = process.env.WHATSAPP_GROUP_NAME || 'TB3-Asuntos sociales';
 const LAST_REMINDER_FILE = path.join(__dirname, 'last-reminder.json');
 
+// Ecuador no aplica horario de verano, así que el offset es fijo en UTC-5.
+// El servidor corre en UTC: desplazamos la fecha para que los getters UTC
+// devuelvan la hora de pared de Ecuador.
+const EC_OFFSET_MS = 5 * 60 * 60 * 1000;
+const SCHEDULE_HOUR_EC = 8;
+
+const ecuadorNow = (d = new Date()) => new Date(d.getTime() - EC_OFFSET_MS);
+const ecuadorDateKey = (d = new Date()) => ecuadorNow(d).toISOString().slice(0, 10);
+
 const loadLastReminderInfo = () => {
     try {
-        return JSON.parse(fs.readFileSync(LAST_REMINDER_FILE, 'utf8'));
+        const saved = JSON.parse(fs.readFileSync(LAST_REMINDER_FILE, 'utf8'));
+        // Migración: los archivos previos no guardaban la fecha del chequeo diario.
+        // La derivamos del último timestamp para no reenviar, en el primer arranque
+        // de esta versión, un recordatorio que ya salió hoy.
+        if (!saved.lastDailyRunDate && saved.timestamp) {
+            saved.lastDailyRunDate = ecuadorDateKey(new Date(saved.timestamp));
+        }
+        return saved;
     } catch {
-        return { timestamp: null, summary: null };
+        return { timestamp: null, summary: null, lastDailyRunDate: null };
     }
 };
 
 let lastReminderInfo = loadLastReminderInfo();
 
 const setLastReminderInfo = (info) => {
-    lastReminderInfo = info;
+    lastReminderInfo = { ...lastReminderInfo, ...info };
     try {
-        fs.writeFileSync(LAST_REMINDER_FILE, JSON.stringify(info));
+        fs.writeFileSync(LAST_REMINDER_FILE, JSON.stringify(lastReminderInfo));
     } catch (err) {
         console.error('[SCHEDULER] No se pudo guardar last-reminder.json:', err.message);
     }
 };
-
-let pendingRetry = false;
-let pendingRetryDate = null;
 
 /**
  * Calculates when the next reminder for a specific birthday will occur.
@@ -88,8 +101,6 @@ const getNextReminderInfo = async () => {
 
         if (!globalNext) return null;
 
-        console.log(`[DEBUG] Siguiente evento encontrado: ${targetBirthday.name} el ${globalNext.date.toISOString()} (${globalNext.type})`);
-
         return {
             date: globalNext.date.toISOString(),
             birthdayDate: globalNext.birthdayDate.toISOString(),
@@ -105,22 +116,23 @@ const getNextReminderInfo = async () => {
 const checkBirthdaysAndSend = async (isRetry = false) => {
     const status = getStatus();
     if (!status.isReady) {
-        pendingRetry = true;
-        pendingRetryDate = new Date().toDateString();
+        // No marcamos lastDailyRunDate: la recuperación lo reintentará al reconectar.
         console.warn(`[SCHEDULER] ⚠️  RECORDATORIO OMITIDO a las ${new Date().toISOString()} — WhatsApp no está listo. Se reintentará al reconectar.`);
         return;
     }
 
     try {
-        const today = new Date();
-        const currentMonth = today.getMonth() + 1;
-        const currentDay = today.getDate();
+        // Las comparaciones van en fecha de Ecuador, no del servidor (UTC), para
+        // que una ejecución fuera del horario habitual no salte de día.
+        const today = ecuadorNow();
+        const currentMonth = today.getUTCMonth() + 1;
+        const currentDay = today.getUTCDate();
 
         const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
+        tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
 
         const nextWeek = new Date(today);
-        nextWeek.setDate(nextWeek.getDate() + 7);
+        nextWeek.setUTCDate(nextWeek.getUTCDate() + 7);
 
         const birthdays = await getBirthdays();
 
@@ -130,33 +142,34 @@ const checkBirthdaysAndSend = async (isRetry = false) => {
             if (b.month === currentMonth && b.day === currentDay) {
                 messages.push(`🤖 ¡Hoy es el cumpleaños de *${b.name}*! 🥳🎂🎉 ¡Felicidades!`);
             }
-            if (b.month === (tomorrow.getMonth() + 1) && b.day === tomorrow.getDate()) {
+            if (b.month === (tomorrow.getUTCMonth() + 1) && b.day === tomorrow.getUTCDate()) {
                 messages.push(`🤖 Recordatorio: Mañana es el cumpleaños de *${b.name}*. 🎂`);
             }
-            if (b.month === (nextWeek.getMonth() + 1) && b.day === nextWeek.getDate()) {
+            if (b.month === (nextWeek.getUTCMonth() + 1) && b.day === nextWeek.getUTCDate()) {
                 messages.push(`🤖 Aviso: En exactamente una semana es el cumpleaños de *${b.name}*. 📅`);
             }
         });
+
+        const runDate = ecuadorDateKey();
 
         if (messages.length > 0) {
             const prefix = isRetry ? `_Disculpa, hubo un problema técnico y este mensaje no pudo enviarse a las 8:00 AM._\n\n` : '';
             const summaryMessage = prefix + messages.join('\n\n');
             await sendGroupMessage(GROUP_NAME, summaryMessage);
-            pendingRetry = false;
             setLastReminderInfo({
                 timestamp: new Date().toISOString(),
-                summary: summaryMessage.length > 50 ? summaryMessage.substring(0, 47) + '...' : summaryMessage
+                summary: summaryMessage.length > 50 ? summaryMessage.substring(0, 47) + '...' : summaryMessage,
+                lastDailyRunDate: runDate
             });
         } else {
-            pendingRetry = false;
             setLastReminderInfo({
                 timestamp: new Date().toISOString(),
-                summary: 'No hubo cumpleaños hoy.'
+                summary: 'No hubo cumpleaños hoy.',
+                lastDailyRunDate: runDate
             });
         }
     } catch (err) {
-        pendingRetry = true;
-        pendingRetryDate = new Date().toDateString();
+        // Dejamos lastDailyRunDate sin actualizar para que se reintente al reconectar.
         console.error('[SCHEDULER] ❌ Error al enviar — se reintentará al reconectar:', err.message);
     }
 };
@@ -164,15 +177,28 @@ const checkBirthdaysAndSend = async (isRetry = false) => {
 const getLastReminder = () => lastReminderInfo;
 
 const recordManualReminder = (message) => {
+    // Intencionalmente NO toca lastDailyRunDate: un envío manual de prueba no
+    // debe cancelar el recordatorio automático del día.
     setLastReminderInfo({
         timestamp: new Date().toISOString(),
         summary: `Manual: ${message.length > 40 ? message.substring(0, 37) + '...' : message}`
     });
 };
 
+/**
+ * Decide si falta ejecutar el chequeo diario. Es pura para poder testearla.
+ * Se basa en la fecha del último chequeo completado y no en una bandera en
+ * memoria: así también cubre el caso de que el proceso (o el servidor entero)
+ * estuviera caído a la hora del cron y este nunca llegara a dispararse.
+ */
+const shouldCatchUp = (lastDailyRunDate, now = new Date()) => {
+    if (lastDailyRunDate === ecuadorDateKey(now)) return false;
+    return ecuadorNow(now).getUTCHours() >= SCHEDULE_HOUR_EC;
+};
+
 const checkPendingRetry = async () => {
-    if (pendingRetry && pendingRetryDate === new Date().toDateString()) {
-        console.log('[SCHEDULER] 🔄 Bot reconectado — reintentando recordatorio pendiente de hoy...');
+    if (shouldCatchUp(lastReminderInfo.lastDailyRunDate)) {
+        console.log(`[SCHEDULER] 🔄 El chequeo de ${ecuadorDateKey()} no se ejecutó (último: ${lastReminderInfo.lastDailyRunDate || 'nunca'}) — recuperando...`);
         await checkBirthdaysAndSend(true);
     }
 };
@@ -190,5 +216,7 @@ module.exports = {
     getLastReminder,
     getNextReminderInfo,
     checkPendingRetry,
-    recordManualReminder
+    recordManualReminder,
+    shouldCatchUp,
+    ecuadorDateKey
 };

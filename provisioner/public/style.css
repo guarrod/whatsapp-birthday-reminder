@@ -1,0 +1,119 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@300;400;600;700;800&display=swap');
+
+:root {
+  --bg-color: #f0f2f5;
+  --glass-border: rgba(0, 0, 0, 0.05);
+  --glass-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.1);
+  --primary: #d2006e;
+  --primary-hover: #3a56d4;
+  --text-main: #2b2d42;
+  --text-muted: #6c757d;
+  --panel-bg: #ffffff;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Nunito Sans', sans-serif;
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  min-height: 100vh;
+}
+
+.glass-panel {
+  background: var(--panel-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  padding: 2rem;
+  box-shadow: var(--glass-shadow);
+}
+
+.title-gradient {
+  background: linear-gradient(135deg, var(--primary), #7209b7);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -1px;
+}
+
+.onboarding-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+
+.onboarding-card {
+  max-width: 480px;
+  width: 100%;
+  text-align: center;
+}
+
+.onboarding-subtitle {
+  color: var(--text-muted);
+  margin: 0.75rem 0 1.5rem;
+}
+
+.onboarding-muted {
+  color: var(--text-muted);
+  margin: 1rem 0;
+}
+
+.form-group {
+  text-align: left;
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 0.4rem;
+}
+
+input {
+  width: 100%;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 1rem;
+}
+
+input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+button {
+  width: 100%;
+  cursor: pointer;
+  border: none;
+  background: var(--primary);
+  color: white;
+  padding: 0.86rem;
+  border-radius: 8px;
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 1rem;
+  margin-top: 0.5rem;
+  transition: all 0.15s;
+}
+
+button:hover:not(:disabled) {
+  background: var(--primary-hover);
+  transform: translateY(-1px);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

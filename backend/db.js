@@ -1,7 +1,8 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
+const { DATA_DIR } = require('./config');
 
-const dbPath = path.resolve(__dirname, 'database.sqlite');
+const dbPath = path.resolve(DATA_DIR, 'database.sqlite');
 const db = new sqlite3.Database(dbPath);
 
 // Ensure table exists

@@ -3,9 +3,10 @@ const fs = require('fs');
 const path = require('path');
 const { getBirthdays } = require('./db');
 const { getStatus, sendGroupMessage } = require('./bot');
+const { getSendTarget } = require('./teamConfig');
+const { DATA_DIR } = require('./config');
 
-const GROUP_NAME = process.env.WHATSAPP_GROUP_NAME || 'TB3-Asuntos sociales';
-const LAST_REMINDER_FILE = path.join(__dirname, 'last-reminder.json');
+const LAST_REMINDER_FILE = path.join(DATA_DIR, 'last-reminder.json');
 
 // Ecuador no aplica horario de verano, así que el offset es fijo en UTC-5.
 // El servidor corre en UTC: desplazamos la fecha para que los getters UTC
@@ -155,7 +156,7 @@ const checkBirthdaysAndSend = async (isRetry = false) => {
         if (messages.length > 0) {
             const prefix = isRetry ? `_Disculpa, hubo un problema técnico y este mensaje no pudo enviarse a las 8:00 AM._\n\n` : '';
             const summaryMessage = prefix + messages.join('\n\n');
-            await sendGroupMessage(GROUP_NAME, summaryMessage);
+            await sendGroupMessage(getSendTarget(), summaryMessage);
             setLastReminderInfo({
                 timestamp: new Date().toISOString(),
                 summary: summaryMessage.length > 50 ? summaryMessage.substring(0, 47) + '...' : summaryMessage,

@@ -15,7 +15,10 @@ const gitHash = (() => {
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
-  base: '/birthdays/',
+  base: process.env.VITE_BASE_PATH || '/birthdays/',
+  build: {
+    outDir: process.env.VITE_OUT_DIR || 'dist',
+  },
   define: {
     __APP_VERSION__: JSON.stringify(pkgVersion),
     __GIT_HASH__: JSON.stringify(gitHash),

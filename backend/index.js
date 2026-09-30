@@ -1,14 +1,13 @@
-require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { getBirthdays, getBirthdayById, addBirthday, updateBirthday, deleteBirthday } = require('./db');
-const { initializeBot, getStatus, sendGroupMessage, onReady } = require('./bot');
+const { initializeBot, getStatus, sendGroupMessage, listGroups, onReady } = require('./bot');
 const { getLastReminder, getNextReminderInfo, startScheduler, checkPendingRetry, recordManualReminder } = require('./scheduler');
-
-const GROUP_NAME = process.env.WHATSAPP_GROUP_NAME || 'TB3-Asuntos sociales';
+const { getTeamConfig, setGroup, getSendTarget } = require('./teamConfig');
+const { PORT } = require('./config');
 
 const app = express();
-const port = process.env.PORT || 3001;
+const port = PORT;
 
 app.use(cors());
 app.use(express.json());
@@ -73,6 +72,25 @@ app.get('/api/bot/status', async (req, res) => {
     });
 });
 
+app.get('/api/bot/groups', async (req, res) => {
+    try {
+        res.json(await listGroups());
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Team config endpoints (onboarding self-service)
+app.get('/api/team/config', (req, res) => {
+    res.json(getTeamConfig());
+});
+
+app.post('/api/team/group', (req, res) => {
+    const { jid, subject } = req.body;
+    if (!jid || !subject) return res.status(400).json({ error: 'Missing jid or subject' });
+    res.json(setGroup(jid, subject));
+});
+
 app.post('/api/bot/send-test/:id', async (req, res) => {
     try {
         const birthday = await getBirthdayById(req.params.id);
@@ -91,7 +109,7 @@ app.post('/api/bot/send-test/:id', async (req, res) => {
             message = `Recordemos que el cumpleaños de *${birthday.name}* es el ${birthday.day} de ${monthName} 📅`;
         }
 
-        await sendGroupMessage(GROUP_NAME, message);
+        await sendGroupMessage(getSendTarget(), message);
         recordManualReminder(message);
 
         res.json({ success: true, message: 'Message sent successfully' });

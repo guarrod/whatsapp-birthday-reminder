@@ -2,6 +2,7 @@
 node_modules/
 frontend/node_modules/
 backend/node_modules/
+provisioner/node_modules/
 
 # IDE/System files
 .DS_Store
@@ -10,6 +11,7 @@ backend/node_modules/
 
 # Build outputs
 frontend/dist/
+frontend/.provision-dist-*/
 frontend/tsconfig.app.tsbuildinfo
 frontend/tsconfig.node.tsbuildinfo
 
@@ -28,6 +30,11 @@ backend/last-reminder.json
 # Environment variables
 .env
 backend/.env
+provisioner/.env
+
+# Registro de equipos e invitaciones del provisioner (estado de producción, no código)
+provisioner/teams.json
+provisioner/invites.json
 
 # Deployment sensitive files
 deploy.sh

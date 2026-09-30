@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { Trash2, Edit3, Save, X, Send, Calendar, Clock } from 'lucide-react';
+import QRStep from './onboarding/QRStep';
+import OnboardingWizard from './onboarding/OnboardingWizard';
+import type { TeamConfig } from './onboarding/types';
 import './index.css';
 
-const API_BASE = '/birthdays/api';
+const API_BASE = `${import.meta.env.BASE_URL}api`;
 
 interface Birthday {
   id: number;
@@ -106,6 +109,8 @@ const MonthPicker = ({ value, onChange, onClose }: MonthPickerProps) => {
 function App() {
   const [birthdays, setBirthdays] = useState<Birthday[]>([]);
   const [status, setStatus] = useState<BotStatus>({ isReady: false, qr: null });
+  const [teamConfig, setTeamConfig] = useState<TeamConfig | null>(null);
+  const [wizardDismissed, setWizardDismissed] = useState(false);
 
   // Form State
   const [name, setName] = useState('');
@@ -127,7 +132,11 @@ function App() {
 
   useEffect(() => {
     fetchBirthdays();
-    const interval = setInterval(fetchStatus, 3000);
+    fetchTeamConfig();
+    const interval = setInterval(() => {
+      fetchStatus();
+      fetchTeamConfig();
+    }, 3000);
     fetchStatus();
     return () => clearInterval(interval);
   }, []);
@@ -169,6 +178,16 @@ function App() {
       setStatus(data);
     } catch (err) {
       console.error('Error fetching status:', err);
+    }
+  };
+
+  const fetchTeamConfig = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/team/config`);
+      const data = await res.json();
+      setTeamConfig(data);
+    } catch (err) {
+      console.error('Error fetching team config:', err);
     }
   };
 
@@ -269,6 +288,21 @@ function App() {
   });
 
   const passedCount = birthdayDots.filter(b => b.hasPassed).length;
+
+  // teamConfig !== null significa "instancia provisionada vía onboarding self-service".
+  // TB3 (instalación legacy) nunca tiene team-config.json, así que teamConfig siempre
+  // es null ahí y este bloque nunca se activa: el dashboard se renderiza como siempre.
+  const needsOnboarding = teamConfig !== null && !teamConfig.onboarded && !wizardDismissed;
+  if (needsOnboarding) {
+    if (!status.isReady) return <QRStep qr={status.qr} />;
+    return (
+      <OnboardingWizard
+        apiBase={API_BASE}
+        teamConfig={teamConfig}
+        onFinish={() => setWizardDismissed(true)}
+      />
+    );
+  }
 
   return (
     <div className="fade-in">

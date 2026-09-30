@@ -1,31 +1,53 @@
 #!/bin/bash
+set -e
 
-# Configuration
-SERVER_IP="YOUR_SERVER_IP"
-SERVER_USER="root"
-SSH_KEY="~/.ssh/your_ssh_key"
-REMOTE_DIR="/root/your-app-path"
+# Uso: ./deploy.sh <equipo>
+# Lee la config de despliegue de ese equipo desde deploy/teams/<equipo>.env
+# (ver deploy/teams/tb3.env como referencia) y no toca la config de los demás.
 
-echo "🚀 Starting deployment to $SERVER_IP..."
+TEAM="$1"
+if [ -z "$TEAM" ]; then
+    echo "Uso: ./deploy.sh <equipo>  (ej. ./deploy.sh tb3)"
+    echo "Equipos disponibles:"
+    ls deploy/teams | sed 's/\.env$//' | sed 's/^/  - /'
+    exit 1
+fi
 
-# 1. Build frontend
-echo "📦 Building frontend..."
+ENV_FILE="deploy/teams/$TEAM.env"
+if [ ! -f "$ENV_FILE" ]; then
+    echo "❌ No existe $ENV_FILE"
+    exit 1
+fi
+
+# shellcheck disable=SC1090
+source "$ENV_FILE"
+
+echo "🚀 Desplegando equipo '$TEAM' a $SSH_HOST..."
+
+# 1. Build frontend con el base path de este equipo
+echo "📦 Construyendo frontend (VITE_BASE_PATH=$VITE_BASE_PATH)..."
 cd frontend
-npm run build
+VITE_BASE_PATH="$VITE_BASE_PATH" npm run build
 cd ..
 
-# 2. Sync files to server
-echo "📤 Syncing files to server..."
-rsync -avz -e "ssh -i $SSH_KEY -o StrictHostKeyChecking=no" \
+# 2. Sincronizar backend y frontend a las rutas remotas de este equipo
+echo "📤 Sincronizando archivos con el servidor..."
+rsync -avz \
     --exclude 'node_modules' \
     --exclude '.git' \
     --exclude '.wwebjs_auth' \
     --exclude '.wwebjs_cache' \
-    --exclude 'backend/database.sqlite' \
-    backend frontend/dist $SERVER_USER@$SERVER_IP:$REMOTE_DIR/
+    --exclude 'auth_info_baileys' \
+    --exclude '*.sqlite' \
+    --exclude '*.sqlite-journal' \
+    --exclude 'last-reminder.json' \
+    --exclude '.env' \
+    backend/ "$SSH_HOST:$REMOTE_BACKEND_DIR/backend/"
 
-# 3. Restart server
-echo "🔄 Restarting server on VPS..."
-ssh -i $SSH_KEY -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_IP "pm2 restart bot-server"
+rsync -avz --delete frontend/dist/ "$SSH_HOST:$REMOTE_FRONTEND_DIR/"
 
-echo "✅ Deployment complete! Check your app at http://$SERVER_IP/"
+# 3. Reiniciar solo el proceso PM2 de este equipo
+echo "🔄 Reiniciando $PM2_NAME en el servidor..."
+ssh "$SSH_HOST" "cd $REMOTE_BACKEND_DIR/backend && npm install --omit=dev && pm2 restart $PM2_NAME"
+
+echo "✅ Despliegue de '$TEAM' completo."

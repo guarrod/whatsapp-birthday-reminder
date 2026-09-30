@@ -812,3 +812,44 @@ select:focus {
   color: var(--text-muted);
   font-weight: 600;
 }
+
+/* Onboarding wizard (QR / selección de grupo / bienvenida) */
+.onboarding-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+
+.onboarding-card {
+  max-width: 480px;
+  width: 100%;
+  text-align: center;
+}
+
+.onboarding-card .qr-container {
+  display: inline-flex;
+}
+
+.onboarding-subtitle {
+  color: var(--text-muted);
+  margin: 0.75rem 0 1.5rem;
+}
+
+.onboarding-muted {
+  color: var(--text-muted);
+  margin: 1rem 0;
+}
+
+.group-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-top: 0.5rem;
+}
+
+.group-item {
+  width: 100%;
+  text-align: left;
+}

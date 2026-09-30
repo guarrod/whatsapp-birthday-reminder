@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Crear bot de cumpleaños</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="onboarding-screen">
+    <div class="glass-panel onboarding-card">
+      <h1 class="title-gradient">Crea el bot de cumpleaños de tu equipo</h1>
+      <p class="onboarding-subtitle">Elige un nombre para tu equipo. Con eso se crea tu propia instancia del bot, lista para vincular tu WhatsApp.</p>
+
+      <form id="provision-form" hidden>
+        <div class="form-group">
+          <label for="displayName">Nombre del equipo</label>
+          <input type="text" id="displayName" name="displayName" placeholder="Ej. Equipo Ventas" required />
+        </div>
+        <button type="submit" id="submit-btn">Crear mi bot</button>
+      </form>
+
+      <p id="message" class="onboarding-muted" hidden></p>
+    </div>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>

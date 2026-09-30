@@ -3,8 +3,9 @@ const { Boom } = require('@hapi/boom');
 const pino = require('pino');
 const qrcode = require('qrcode-terminal');
 const path = require('path');
+const { DATA_DIR } = require('./config');
 
-const AUTH_DIR = path.join(__dirname, 'auth_info_baileys');
+const AUTH_DIR = path.join(DATA_DIR, 'auth_info_baileys');
 const logger = pino({ level: 'silent' });
 
 let sock = null;
@@ -103,21 +104,31 @@ const resolveGroupJid = async (groupName) => {
     return match.id;
 };
 
-const sendGroupMessage = async (groupName, message) => {
+const listGroups = async () => {
+    if (!isReady || !sock) {
+        throw new Error('WhatsApp client is not ready');
+    }
+    const groups = await sock.groupFetchAllParticipating();
+    return Object.values(groups).map(g => ({ id: g.id, subject: g.subject }));
+};
+
+const sendGroupMessage = async (target, message) => {
     if (!isReady || !sock) {
         throw new Error('WhatsApp client is not ready');
     }
 
     try {
-        const jid = await resolveGroupJid(groupName);
+        // Un equipo onboardeado ya conoce el JID exacto de su grupo — nos saltamos
+        // el matching por nombre (frágil ante mayúsculas/tildes/espacios).
+        const jid = target.endsWith('@g.us') ? target : await resolveGroupJid(target);
 
         if (!jid) {
-            console.log(`[BOT] ❌ No se encontró el grupo: ${groupName}`);
-            throw new Error(`Group ${groupName} not found`);
+            console.log(`[BOT] ❌ No se encontró el grupo: ${target}`);
+            throw new Error(`Group ${target} not found`);
         }
 
         await sock.sendMessage(jid, { text: message });
-        console.log(`[BOT] ✅ Mensaje enviado a grupo ${groupName}: ${message}`);
+        console.log(`[BOT] ✅ Mensaje enviado a grupo ${target}: ${message}`);
     } catch (error) {
         // Cached JID may be stale (e.g. group recreated) — clear it so the next attempt re-resolves
         cachedGroupJid = null;
@@ -130,5 +141,6 @@ module.exports = {
     initializeBot,
     getStatus,
     sendGroupMessage,
+    listGroups,
     onReady
 };

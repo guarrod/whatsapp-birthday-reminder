@@ -24,7 +24,9 @@ form.addEventListener('submit', async (e) => {
   const displayName = document.getElementById('displayName').value;
 
   try {
-    const res = await fetch('/api/provision', {
+    // Relativo (sin "/" inicial): la página vive bajo /onboarding/, y una ruta
+    // absoluta resolvería contra la raíz del dominio en vez de ese prefijo.
+    const res = await fetch('api/provision', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ displayName, token }),

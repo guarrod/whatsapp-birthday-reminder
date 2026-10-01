@@ -1,15 +1,26 @@
 const fs = require('fs');
 const path = require('path');
+const net = require('net');
 const { execSync } = require('child_process');
 const pm2 = require('pm2');
 const { slugify, isReserved } = require('./slug');
-const { reserveSlugAndPort, commitTeam, removeTeam } = require('./teamsStore');
+const { reserveSlugAndPort, reassignPort, commitTeam, removeTeam } = require('./teamsStore');
 const { isValidToken } = require('./invitesStore');
 const { renderNginxSnippet } = require('./nginxTemplate');
 
 const httpError = (status, message) => Object.assign(new Error(message), { status });
 
 const isDryRun = () => process.env.DRY_RUN === '1';
+
+// El registro propio (teams.json) solo sabe de los puertos que ÉL asignó —
+// no de otras apps que ya corran en el mismo VPS (ej. kpi-server en 3002).
+// Verificamos contra el sistema operativo antes de confiar en el número.
+const isPortFree = (port) => new Promise((resolve) => {
+    const tester = net.createServer();
+    tester.once('error', () => resolve(false));
+    tester.once('listening', () => tester.close(() => resolve(true)));
+    tester.listen(port, '0.0.0.0');
+});
 
 // pm2.start() puede llamar a su callback sin error aunque el script no exista o
 // el proceso hijo crashee al instante (PM2 solo confirma que lo registró y lo
@@ -105,6 +116,17 @@ const provisionTeam = async ({ displayName, token }) => {
     } catch (err) {
         if (err.message === 'SLUG_TAKEN') throw httpError(409, 'Ya existe un equipo con ese nombre, elige otro');
         throw err;
+    }
+
+    // Si el puerto ya está en uso por otra app del servidor (no registrada en
+    // teams.json), saltamos al siguiente en vez de arrancar un proceso que
+    // nunca podrá escuchar en ese puerto.
+    for (let attempts = 0; !(await isPortFree(port)) && attempts < 20; attempts++) {
+        port = await reassignPort(slug);
+    }
+    if (!(await isPortFree(port))) {
+        await removeTeam(slug).catch(() => {});
+        throw httpError(500, 'No se encontró un puerto libre, avisá al admin');
     }
 
     const dataDir = path.join(process.env.TEAMS_BASE_DIR, slug, 'data');

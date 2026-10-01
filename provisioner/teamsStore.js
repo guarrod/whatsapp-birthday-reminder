@@ -7,7 +7,7 @@ const readRaw = () => {
     try {
         return JSON.parse(fs.readFileSync(TEAMS_FILE, 'utf8'));
     } catch {
-        return { nextPort: 3002, teams: [] };
+        return { nextPort: 3100, teams: [] };
     }
 };
 
@@ -42,6 +42,20 @@ const reserveSlugAndPort = (slug) => withLock(() => {
     return port;
 });
 
+// Usado cuando el puerto asignado resulta estar ocupado por otra app del
+// servidor (ver provision.js): salta al siguiente puerto sin crear una
+// entrada nueva, reasignando el placeholder ya reservado para ese slug.
+const reassignPort = (slug) => withLock(() => {
+    const data = readRaw();
+    const team = data.teams.find(t => t.slug === slug);
+    if (!team) throw new Error(`No se encontró el equipo "${slug}" para reasignar puerto`);
+    const port = data.nextPort;
+    data.nextPort = port + 1;
+    team.port = port;
+    writeRaw(data);
+    return port;
+});
+
 const commitTeam = (slug, fields) => withLock(() => {
     const data = readRaw();
     const team = data.teams.find(t => t.slug === slug);
@@ -55,4 +69,4 @@ const removeTeam = (slug) => withLock(() => {
     writeRaw(data);
 });
 
-module.exports = { listTeams, reserveSlugAndPort, commitTeam, removeTeam };
+module.exports = { listTeams, reserveSlugAndPort, reassignPort, commitTeam, removeTeam };

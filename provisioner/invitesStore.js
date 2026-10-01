@@ -27,11 +27,17 @@ const withLock = (fn) => {
 
 const listInvites = () => readRaw().invites;
 
-const createInvite = (label) => withLock(() => {
+// El token lo elige el admin (ej. "ventas2026") para que el link sea fácil de
+// compartir y leer, en vez de un hex aleatorio. Debe ser único entre TODAS las
+// invitaciones (activas o revocadas), para que no haya ambigüedad en el registro.
+const createInvite = (token, label) => withLock(() => {
     const data = readRaw();
+    if (data.invites.some(i => i.token === token)) {
+        throw new Error('TOKEN_TAKEN');
+    }
     const invite = {
         id: crypto.randomUUID(),
-        token: crypto.randomBytes(16).toString('hex'),
+        token,
         label: label || null,
         createdAt: new Date().toISOString(),
         revoked: false,

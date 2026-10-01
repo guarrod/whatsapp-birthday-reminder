@@ -23,7 +23,7 @@ const TOKEN_PATTERN = /^[a-z0-9-]+$/i;
         console.log(`https://${domain}/onboarding/?token=${invite.token}`);
     } catch (err) {
         if (err.message === 'TOKEN_TAKEN') {
-            console.error(`"${rawToken}" ya está en uso por otra invitación. Elegí otra palabra.`);
+            console.error(`"${rawToken}" ya está en uso por otra invitación. Elige otra palabra.`);
         } else {
             console.error(err.message);
         }

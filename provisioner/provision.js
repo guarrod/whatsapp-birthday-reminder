@@ -126,7 +126,7 @@ const provisionTeam = async ({ displayName, token }) => {
     }
     if (!(await isPortFree(port))) {
         await removeTeam(slug).catch(() => {});
-        throw httpError(500, 'No se encontró un puerto libre, avisá al admin');
+        throw httpError(500, 'No se encontró un puerto libre, avisa al admin');
     }
 
     const dataDir = path.join(process.env.TEAMS_BASE_DIR, slug, 'data');

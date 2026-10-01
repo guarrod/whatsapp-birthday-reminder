@@ -49,7 +49,7 @@ const GroupSelectStep = ({ apiBase, onSelected }: GroupSelectStepProps) => {
     <div className="fade-in onboarding-screen">
       <div className="glass-panel onboarding-card">
         <h1 className="title-gradient">¿A qué grupo mandamos los recordatorios?</h1>
-        <p className="onboarding-subtitle">Elige el grupo de WhatsApp donde tu equipo quiere recibir los avisos de cumpleaños.</p>
+        <p className="onboarding-subtitle">Elige el grupo de WhatsApp donde quieres recibir los avisos de cumpleaños — puede ser el grupo de trabajo o uno personal.</p>
 
         {loading && <p className="onboarding-muted">Cargando tus grupos...</p>}
         {error && <p className="onboarding-muted">{error}</p>}

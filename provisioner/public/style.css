@@ -66,6 +66,30 @@ body {
   margin: 1rem 0;
 }
 
+.onboarding-checklist {
+  text-align: left;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1.5rem;
+}
+
+.onboarding-checklist li {
+  position: relative;
+  padding-left: 1.3rem;
+  margin-bottom: 0.6rem;
+}
+
+.onboarding-checklist li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  color: var(--primary);
+  font-weight: 700;
+}
+
 .form-group {
   text-align: left;
   margin-bottom: 1rem;

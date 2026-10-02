@@ -87,26 +87,33 @@ const getNextReminderInfo = async () => {
         if (birthdays.length === 0) return null;
 
         const now = new Date();
-        let globalNext = null;
-        let targetBirthday = null;
+        const candidates = [];
 
         birthdays.forEach(b => {
             const personNext = getNextReminderForBirthday(b, now);
-            if (personNext) {
-                if (!globalNext || personNext.date < globalNext.date) {
-                    globalNext = personNext;
-                    targetBirthday = b;
-                }
-            }
+            if (personNext) candidates.push({ birthday: b, next: personNext });
         });
 
-        if (!globalNext) return null;
+        if (candidates.length === 0) return null;
+
+        // Puede haber varias personas empatadas en la misma fecha (ej. dos
+        // cumpleaños el mismo día) — se devuelven todas, no solo la primera.
+        const minDate = candidates.reduce(
+            (earliest, c) => (c.next.date < earliest ? c.next.date : earliest),
+            candidates[0].next.date
+        );
+
+        const entries = candidates
+            .filter(c => c.next.date.getTime() === minDate.getTime())
+            .map(c => ({
+                name: c.birthday.name,
+                birthdayDate: c.next.birthdayDate.toISOString(),
+                type: c.next.type
+            }));
 
         return {
-            date: globalNext.date.toISOString(),
-            birthdayDate: globalNext.birthdayDate.toISOString(),
-            name: targetBirthday.name,
-            type: globalNext.type
+            date: minDate.toISOString(),
+            entries
         };
     } catch (err) {
         console.error('Error calculating next reminder:', err);

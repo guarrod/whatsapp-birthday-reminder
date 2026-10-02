@@ -24,9 +24,11 @@ interface BotStatus {
   };
   nextReminder?: {
     date: string;
-    birthdayDate: string;
-    name: string;
-    type: string;
+    entries: Array<{
+      name: string;
+      birthdayDate: string;
+      type: string;
+    }>;
   };
 }
 
@@ -528,15 +530,17 @@ function App() {
             <div className="log-item" style={{ borderTop: '1px solid #eee', paddingTop: '0.8rem' }}>
               <span className="log-label"><Calendar size={12} style={{ marginRight: '4px' }} /> Próximo cumpleaños</span>
               <span className="log-value">
-                {status.nextReminder ? (
-                  <>
-                    <div className='birthday'>
-                      {status.nextReminder.name} - {formatDateShort(status.nextReminder.birthdayDate)}
+                {status.nextReminder && status.nextReminder.entries.length > 0 ? (
+                  status.nextReminder.entries.map((entry, i) => (
+                    <div key={i} style={i > 0 ? { marginTop: '0.5rem' } : undefined}>
+                      <div className='birthday'>
+                        {entry.name} - {formatDateShort(entry.birthdayDate)}
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                        Se envía recordatorio {entry.type.toLowerCase()}, el {formatDateShort(status.nextReminder!.date)}
+                      </div>
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                      Se envía recordatorio {status.nextReminder.type.toLowerCase()}, el {formatDateShort(status.nextReminder.date)}
-                    </div>
-                  </>
+                  ))
                 ) : 'No hay cumpleaños próximos.'}
               </span>
             </div>

@@ -121,6 +121,45 @@ const getNextReminderInfo = async () => {
     }
 };
 
+/**
+ * A diferencia de getNextReminderInfo (que agrupa por cuándo sale el próximo
+ * recordatorio, y puede mezclar cumpleaños distintos si sus avisos caen el
+ * mismo día), esto agrupa por la próxima fecha de cumpleaños real —
+ * devuelve a todas las personas que cumplen ese mismo día.
+ */
+const getNextBirthdayInfo = async () => {
+    try {
+        const birthdays = await getBirthdays();
+        if (birthdays.length === 0) return null;
+
+        const now = new Date();
+        const year = now.getFullYear();
+
+        const candidates = birthdays.map(b => {
+            const thisYear = new Date(year, b.month - 1, b.day, 9, 0, 0);
+            const birthdayDate = thisYear > now ? thisYear : new Date(year + 1, b.month - 1, b.day, 9, 0, 0);
+            return { name: b.name, birthdayDate };
+        });
+
+        const minDate = candidates.reduce(
+            (earliest, c) => (c.birthdayDate < earliest ? c.birthdayDate : earliest),
+            candidates[0].birthdayDate
+        );
+
+        const entries = candidates
+            .filter(c => c.birthdayDate.getTime() === minDate.getTime())
+            .map(c => ({ name: c.name, birthdayDate: c.birthdayDate.toISOString() }));
+
+        return {
+            date: minDate.toISOString(),
+            entries
+        };
+    } catch (err) {
+        console.error('Error calculating next birthday:', err);
+        return null;
+    }
+};
+
 const checkBirthdaysAndSend = async (isRetry = false) => {
     const status = getStatus();
     if (!status.isReady) {
@@ -223,6 +262,7 @@ module.exports = {
     checkBirthdaysAndSend,
     getLastReminder,
     getNextReminderInfo,
+    getNextBirthdayInfo,
     checkPendingRetry,
     recordManualReminder,
     shouldCatchUp,

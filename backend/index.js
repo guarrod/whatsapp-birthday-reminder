@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const { getBirthdays, getBirthdayById, addBirthday, updateBirthday, deleteBirthday } = require('./db');
 const { initializeBot, getStatus, sendGroupMessage, listGroups, onReady } = require('./bot');
-const { getLastReminder, getNextReminderInfo, startScheduler, checkPendingRetry, recordManualReminder } = require('./scheduler');
+const { getLastReminder, getNextReminderInfo, getNextBirthdayInfo, startScheduler, checkPendingRetry, recordManualReminder } = require('./scheduler');
 const { getTeamConfig, setGroup, getSendTarget } = require('./teamConfig');
 const { PORT } = require('./config');
 
@@ -68,7 +68,8 @@ app.get('/api/bot/status', async (req, res) => {
     res.json({
         ...getStatus(),
         lastReminder: getLastReminder(),
-        nextReminder: await getNextReminderInfo()
+        nextReminder: await getNextReminderInfo(),
+        nextBirthday: await getNextBirthdayInfo()
     });
 });
 

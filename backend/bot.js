@@ -2,6 +2,7 @@ const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = requi
 const { Boom } = require('@hapi/boom');
 const pino = require('pino');
 const qrcode = require('qrcode-terminal');
+const fs = require('fs');
 const path = require('path');
 const { DATA_DIR } = require('./config');
 
@@ -63,8 +64,19 @@ const connectToWhatsApp = async () => {
                         console.error('[BOT] ❌ Error al reconectar:', err.message);
                     });
                 }, 5000);
-            } else if (!shouldReconnect) {
-                console.error('[BOT] ❌ Sesión cerrada (logged out). Es necesario escanear el QR de nuevo.');
+            } else if (!shouldReconnect && !reconnecting) {
+                // Las credenciales ya no sirven: reconectar con ellas daría otro 401 y
+                // nunca emitiría un QR. Las borramos para que Baileys arranque una
+                // sesión nueva y el panel muestre el QR para volver a vincular.
+                console.error('[BOT] ❌ Sesión cerrada (logged out). Limpiando credenciales y generando un QR nuevo...');
+                reconnecting = true;
+                fs.rmSync(AUTH_DIR, { recursive: true, force: true });
+                setTimeout(() => {
+                    reconnecting = false;
+                    connectToWhatsApp().catch(err => {
+                        console.error('[BOT] ❌ Error al regenerar el QR:', err.message);
+                    });
+                }, 2000);
             }
         }
     });

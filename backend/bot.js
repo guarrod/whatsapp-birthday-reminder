@@ -24,6 +24,7 @@ const connectToWhatsApp = async () => {
 
     sock = makeWASocket({
         auth: state,
+        markOnlineOnConnect: false,
         logger
     });
 

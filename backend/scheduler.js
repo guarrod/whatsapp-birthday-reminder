@@ -243,10 +243,30 @@ const shouldCatchUp = (lastDailyRunDate, now = new Date()) => {
     return ecuadorNow(now).getUTCHours() >= SCHEDULE_HOUR_EC;
 };
 
+// Minutos transcurridos desde la hora programada (08:00 EC) del día de `now`.
+const minutesPastSchedule = (now = new Date()) => {
+    const ec = ecuadorNow(now);
+    return (ec.getUTCHours() - SCHEDULE_HOUR_EC) * 60 + ec.getUTCMinutes();
+};
+
+// Por debajo de este retraso el aviso de "problema técnico" sobra: casi nadie
+// nota un recordatorio que llega unos minutos tarde.
+const APOLOGY_AFTER_MINUTES = 15;
+
+let catchUpRunning = false;
+
 const checkPendingRetry = async () => {
-    if (shouldCatchUp(lastReminderInfo.lastDailyRunDate)) {
+    if (catchUpRunning) return;
+    if (!shouldCatchUp(lastReminderInfo.lastDailyRunDate)) return;
+    // Sin WhatsApp listo no hay nada que hacer; el sondeo o onReady lo reintentan.
+    if (!getStatus().isReady) return;
+
+    catchUpRunning = true;
+    try {
         console.log(`[SCHEDULER] 🔄 El chequeo de ${ecuadorDateKey()} no se ejecutó (último: ${lastReminderInfo.lastDailyRunDate || 'nunca'}) — recuperando...`);
-        await checkBirthdaysAndSend(true);
+        await checkBirthdaysAndSend(minutesPastSchedule() > APOLOGY_AFTER_MINUTES);
+    } finally {
+        catchUpRunning = false;
     }
 };
 
@@ -254,6 +274,12 @@ const startScheduler = () => {
     console.log('Starting birthday check scheduler (runs every day at 08:00 AM Ecuador / 13:00 UTC)...');
     cron.schedule('0 13 * * *', () => {
         checkBirthdaysAndSend();
+    });
+    // node-cron 4 descarta (no ejecuta tarde) un tick retrasado por CPU/IO, y
+    // los bots del VPS disparan todos a las 13:00:00. Este sondeo recupera el
+    // chequeo en minutos sin depender de que WhatsApp se reconecte.
+    cron.schedule('*/5 * * * *', () => {
+        checkPendingRetry().catch(err => console.error('[SCHEDULER] Error en el sondeo de recuperación:', err.message));
     });
 };
 
@@ -266,5 +292,6 @@ module.exports = {
     checkPendingRetry,
     recordManualReminder,
     shouldCatchUp,
+    minutesPastSchedule,
     ecuadorDateKey
 };

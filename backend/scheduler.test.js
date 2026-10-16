@@ -17,7 +17,7 @@ Module._load = function (request) {
     return originalLoad.apply(this, arguments);
 };
 
-const { shouldCatchUp, ecuadorDateKey } = require('./scheduler');
+const { shouldCatchUp, minutesPastSchedule, ecuadorDateKey } = require('./scheduler');
 
 const at = (iso) => new Date(iso);
 let passed = 0;

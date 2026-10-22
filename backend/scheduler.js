@@ -160,7 +160,15 @@ const getNextBirthdayInfo = async () => {
     }
 };
 
+// El cron de las 13:00, el sondeo de */5 (que también cae a las 13:00:00) y
+// onReady pueden entrar aquí a la vez. lastDailyRunDate se guarda recién después
+// del envío, así que sin esta guarda cada ruta ve "pendiente" y manda el suyo.
+let dailyCheckRunning = false;
+
 const checkBirthdaysAndSend = async (isRetry = false) => {
+    if (dailyCheckRunning) return;
+    if (lastReminderInfo.lastDailyRunDate === ecuadorDateKey()) return;
+
     const status = getStatus();
     if (!status.isReady) {
         // No marcamos lastDailyRunDate: la recuperación lo reintentará al reconectar.
@@ -168,6 +176,7 @@ const checkBirthdaysAndSend = async (isRetry = false) => {
         return;
     }
 
+    dailyCheckRunning = true;
     try {
         // Las comparaciones van en fecha de Ecuador, no del servidor (UTC), para
         // que una ejecución fuera del horario habitual no salte de día.
@@ -218,6 +227,8 @@ const checkBirthdaysAndSend = async (isRetry = false) => {
     } catch (err) {
         // Dejamos lastDailyRunDate sin actualizar para que se reintente al reconectar.
         console.error('[SCHEDULER] ❌ Error al enviar — se reintentará al reconectar:', err.message);
+    } finally {
+        dailyCheckRunning = false;
     }
 };
 
@@ -253,21 +264,14 @@ const minutesPastSchedule = (now = new Date()) => {
 // nota un recordatorio que llega unos minutos tarde.
 const APOLOGY_AFTER_MINUTES = 15;
 
-let catchUpRunning = false;
-
 const checkPendingRetry = async () => {
-    if (catchUpRunning) return;
+    if (dailyCheckRunning) return;
     if (!shouldCatchUp(lastReminderInfo.lastDailyRunDate)) return;
     // Sin WhatsApp listo no hay nada que hacer; el sondeo o onReady lo reintentan.
     if (!getStatus().isReady) return;
 
-    catchUpRunning = true;
-    try {
-        console.log(`[SCHEDULER] 🔄 El chequeo de ${ecuadorDateKey()} no se ejecutó (último: ${lastReminderInfo.lastDailyRunDate || 'nunca'}) — recuperando...`);
-        await checkBirthdaysAndSend(minutesPastSchedule() > APOLOGY_AFTER_MINUTES);
-    } finally {
-        catchUpRunning = false;
-    }
+    console.log(`[SCHEDULER] 🔄 El chequeo de ${ecuadorDateKey()} no se ejecutó (último: ${lastReminderInfo.lastDailyRunDate || 'nunca'}) — recuperando...`);
+    await checkBirthdaysAndSend(minutesPastSchedule() > APOLOGY_AFTER_MINUTES);
 };
 
 const startScheduler = () => {

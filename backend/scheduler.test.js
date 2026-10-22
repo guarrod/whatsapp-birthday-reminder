@@ -7,17 +7,41 @@
 const assert = require('assert');
 const Module = require('module');
 
+const os = require('os');
+const fs = require('fs');
+const path = require('path');
+
+// Estado controlable de los stubs; last-reminder.json va a un directorio temporal.
+const tmpDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'scheduler-test-'));
+const stub = {
+    ready: false,
+    sent: [],
+    birthdays: [],
+    sendDelayMs: 0,
+};
+
 const originalLoad = Module._load;
 Module._load = function (request) {
     if (request === 'node-cron') return { schedule: () => {} };
-    if (request === './db') return { getBirthdays: async () => [] };
+    if (request === './db') return { getBirthdays: async () => stub.birthdays };
+    if (request === './config') return { DATA_DIR: tmpDataDir };
+    if (request === './teamConfig') return { getSendTarget: () => 'grupo-test' };
     if (request === './bot') {
-        return { getStatus: () => ({ isReady: false }), sendGroupMessage: async () => {} };
+        return {
+            getStatus: () => ({ isReady: stub.ready }),
+            sendGroupMessage: async (target, message) => {
+                await new Promise((r) => setTimeout(r, stub.sendDelayMs));
+                stub.sent.push(message);
+            },
+        };
     }
     return originalLoad.apply(this, arguments);
 };
 
-const { shouldCatchUp, minutesPastSchedule, ecuadorDateKey } = require('./scheduler');
+const {
+    shouldCatchUp, minutesPastSchedule, ecuadorDateKey,
+    checkBirthdaysAndSend, checkPendingRetry,
+} = require('./scheduler');
 
 const at = (iso) => new Date(iso);
 let passed = 0;
@@ -57,4 +81,30 @@ check('reconexión a las 20:00 EC habiendo corrido ese día -> no reenvía',
 check('caído varios días, vuelve pasada la hora -> recupera',
     shouldCatchUp('2026-08-20', at('2026-08-29T15:00:00Z')), true);
 
-console.log(`\n${passed}/${passed} pruebas OK`);
+const runConcurrencyTests = async () => {
+    console.log('\nenvío diario (sin duplicados):');
+
+    // Hoy en Ecuador, para que haya un mensaje que enviar.
+    const ec = new Date(Date.now() - 5 * 60 * 60 * 1000);
+    stub.birthdays = [{ name: 'Ana', month: ec.getUTCMonth() + 1, day: ec.getUTCDate() }];
+    stub.ready = true;
+    stub.sendDelayMs = 50;
+
+    // Cron de las 13:00 y sondeo de */5 disparando a la vez; shouldCatchUp
+    // depende de la hora real, así que el sondeo puede o no entrar — en ambos
+    // casos debe salir un solo mensaje.
+    await Promise.all([checkBirthdaysAndSend(), checkPendingRetry(), checkBirthdaysAndSend()]);
+    check('llamadas simultáneas -> un solo mensaje', stub.sent.length, 1);
+
+    await checkBirthdaysAndSend();
+    check('otra llamada el mismo día -> no reenvía', stub.sent.length, 1);
+};
+
+runConcurrencyTests().then(() => {
+    console.log(`\n${passed}/${passed} pruebas OK`);
+    fs.rmSync(tmpDataDir, { recursive: true, force: true });
+}).catch((err) => {
+    fs.rmSync(tmpDataDir, { recursive: true, force: true });
+    console.error(err);
+    process.exit(1);
+});

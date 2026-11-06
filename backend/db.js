@@ -12,9 +12,15 @@ db.serialize(() => {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
       day INTEGER NOT NULL,
-      month INTEGER NOT NULL
+      month INTEGER NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
+    // Migra bases ya existentes que no tenían la columna (SQLite no soporta
+    // "ADD COLUMN IF NOT EXISTS"; se ignora el error si ya fue aplicada antes).
+    db.run(`ALTER TABLE birthdays ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP`, (err) => {
+        if (err && !/duplicate column/i.test(err.message)) throw err;
+    });
 });
 
 const getBirthdays = () => {
